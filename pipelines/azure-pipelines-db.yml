@@ -1,0 +1,48 @@
+trigger:
+  branches:
+    include:
+      - main
+      - feature/*
+      - staging
+
+variables:
+  configuration: release
+  artifactname: AzureSQLdb
+
+stages:
+- stage: DatabaseBuild
+  displayName: 'Build database dacpac'
+  jobs:
+    - job: 'BuildDatabase'
+      displayName: 'Build database dacpac'  
+      variables:
+        variables:
+        projpath: '$(System.DefaultWorkingDirectory)\helloworld'
+        projfile: 'helloworld.sqlproj'
+
+      pool:
+        vmImage: 'windows-latest'
+
+      steps:
+
+      - task: VSBuild@1
+        displayName: 'Build database project'
+        inputs:
+          solution: $(projpath)\$(projfile)
+          configuration: $(configuration)
+
+      - task: CopyFiles@2
+        displayName: "Copy files to artifact folder"
+        inputs:
+          Contents: |
+            $(projpath)\bin\$(configuration)\*.*
+          TargetFolder: '$(Build.ArtifactStagingDirectory)\$(artifactname)'
+          FlattenFolders: true
+          OverWrite: true
+
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish database artifact'
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)\$(artifactname)'
+          ArtifactName: $(artifactname)
+          publishLocation: 'Container'

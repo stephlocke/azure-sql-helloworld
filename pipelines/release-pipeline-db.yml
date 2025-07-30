@@ -1,0 +1,13 @@
+variables:
+  blockOnPossibleDataLoss: 'True'
+
+steps:
+- task: SqlAzureDacpacDeployment@1
+  displayName: 'Azure SQL DacpacTask'
+  inputs:
+    azureSubscription: 'replacewithserviceconnection'
+    AuthenticationType: servicePrincipal
+    ServerName: 'replacewithyourdbname.database.windows.net'
+    DatabaseName: helloworld
+    DacpacFile: '$(System.DefaultWorkingDirectory)/helloworld.dacpac'
+    AdditionalArguments: '/p:BlockOnPossibleDataLoss=$(blockOnPossibleDataLoss)'

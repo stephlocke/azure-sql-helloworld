@@ -1,0 +1,67 @@
+name: Azure Pipelines Bicep CI/CD
+description: 'Pipeline to lint, validate, and publish Bicep files for Azure SQL deployment
+trigger:
+- main
+- staging
+- feature/*
+
+parameters:
+  - name: environment
+    displayName: 'Environment to deploy to'
+    type: string
+    default: 'dev'
+    values:
+    - 'dev'
+    - 'prod'
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Lint
+    jobs:
+      - job: Lint
+        steps:
+          - script: echo "Use the Bicep linter to verify that the Bicep file is well formed and doesn't contain any obvious errors"
+          - script: |
+              az bicep build --file '$(System.DefaultWorkingDirectory)/bicep/main.bicep'
+              az bicep build-params --file '$(System.DefaultWorkingDirectory)/bicep/main.bicepparam'
+
+  - stage: Validate
+    dependsOn: Lint
+    jobs:
+      - job: Validate
+        steps:
+          - task: AzureResourceManagerTemplateDeployment@3
+            name: ArmDeployment
+            inputs:
+              deploymentScope: 'Subscription'
+              azureResourceManagerConnection: 'replacewithserviceconnection'
+              subscriptionId: 'replacewithsubscriptionid'
+              location: 'westeurope'
+              # templateLocation: 'Linked artifact'
+              csmFile: '$(System.DefaultWorkingDirectory)/bicep/main.bicep'
+              csmParametersFile: '$(System.DefaultWorkingDirectory)/bicep/main.bicepparam'
+              # deploymentOutputs: configStoreName
+              deploymentMode:  Validation
+              overrideParameters: >
+                -stage "${{ parameters.environment }}" 
+  - stage: Publish
+    dependsOn: Validate
+    jobs:
+      - job: Publish
+        steps:
+          - script: echo "Publish bicep to artifacts."
+          - task: CopyFiles@2
+            inputs:
+              Contents: |
+                **/*.bicep
+                **/*.bicepparam
+                **/*.ps1
+              targetFolder: '$(Build.ArtifactStagingDirectory)'  
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+          - script: echo "Publish completed."

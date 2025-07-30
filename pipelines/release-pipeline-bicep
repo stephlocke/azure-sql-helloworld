@@ -1,0 +1,15 @@
+#Your build pipeline references an undefined variable named ‘Stage’. Create or edit the build pipeline for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
+
+steps:
+- task: AzureResourceManagerTemplateDeployment@3
+  displayName: 'ARM Template deployment: Subscription scope'
+  inputs:
+    deploymentScope: Subscription
+    azureResourceManagerConnection: 'replacewithserviceconnection'
+    subscriptionId: 'replacewithsubscriptionid'
+    location: 'westeurope'
+    csmFile: '$(System.DefaultWorkingDirectory)/drop/main.bicep'
+    csmParametersFile: '$(System.DefaultWorkingDirectory)/drop/main.bicepparam'
+    overrideParameters: '-stage $(Stage)'
+    deploymentName: bicep
+    deploymentOutputs: configStoreName
